@@ -14,7 +14,8 @@ export async function fetchMonthlyHealthMetrics(year: number, month: number) {
   const startDate = new Date(year, month, 1).toISOString().split('T')[0];
   const endDate = new Date(year, month + 1, 0).toISOString().split('T')[0];
 
-  const { data: metrics, error } = await supabase
+  // First fetch health metrics
+  const { data: metrics, error: metricsError } = await supabase
     .from('daily_health_metrics')
     .select(`
       date,
@@ -23,32 +24,58 @@ export async function fetchMonthlyHealthMetrics(year: number, month: number) {
       distance,
       active_minutes,
       heart_rate,
-      mood,
-      workouts (
-        id,
-        workout_type_id,
-        duration,
-        calories,
-        workout_types (
-          name,
-          icon,
-          color
-        )
+      mood
+    `)
+    .gte('date', startDate)
+    .lte('date', endDate);
+
+  if (metricsError) {
+    console.error('Error fetching health metrics:', metricsError);
+    return null;
+  }
+
+  // Then fetch workouts for the same period
+  const { data: workouts, error: workoutsError } = await supabase
+    .from('workouts')
+    .select(`
+      id,
+      date,
+      duration,
+      calories,
+      workout_types (
+        name,
+        icon,
+        color
       )
     `)
     .gte('date', startDate)
     .lte('date', endDate);
 
-  if (error) {
-    console.error('Error fetching health metrics:', error);
+  if (workoutsError) {
+    console.error('Error fetching workouts:', workoutsError);
     return null;
   }
 
-  return metrics;
+  // Combine the data
+  const workoutsByDate = workouts.reduce((acc, workout) => {
+    const date = workout.date;
+    if (!acc[date]) {
+      acc[date] = [];
+    }
+    acc[date].push(workout);
+    return acc;
+  }, {} as Record<string, typeof workouts>);
+
+  // Merge health metrics with workouts
+  return metrics.map(metric => ({
+    ...metric,
+    workouts: workoutsByDate[metric.date] || []
+  }));
 }
 
 export async function fetchDayDetails(date: string) {
-  const { data, error } = await supabase
+  // Fetch health metrics
+  const { data: metrics, error: metricsError } = await supabase
     .from('daily_health_metrics')
     .select(`
       date,
@@ -57,26 +84,39 @@ export async function fetchDayDetails(date: string) {
       distance,
       active_minutes,
       heart_rate,
-      mood,
-      workouts (
-        id,
-        workout_type_id,
-        duration,
-        calories,
-        workout_types (
-          name,
-          icon,
-          color
-        )
-      )
+      mood
     `)
     .eq('date', date)
     .single();
 
-  if (error) {
-    console.error('Error fetching day details:', error);
+  if (metricsError) {
+    console.error('Error fetching health metrics:', metricsError);
     return null;
   }
 
-  return data;
+  // Fetch workouts
+  const { data: workouts, error: workoutsError } = await supabase
+    .from('workouts')
+    .select(`
+      id,
+      duration,
+      calories,
+      workout_types (
+        name,
+        icon,
+        color
+      )
+    `)
+    .eq('date', date);
+
+  if (workoutsError) {
+    console.error('Error fetching workouts:', workoutsError);
+    return null;
+  }
+
+  // Combine the data
+  return {
+    ...metrics,
+    workouts: workouts || []
+  };
 }
