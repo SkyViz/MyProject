@@ -7,7 +7,6 @@ import {
   Flame,
 } from 'lucide-react';
 import { DayDetailsModal } from '../components/DayDetailsModal';
-import { fetchMonthlyHealthMetrics, fetchDayDetails } from '../lib/supabase';
 
 interface DailyMetrics {
   date: string;
@@ -36,24 +35,50 @@ export function WorkoutPage() {
   const [selectedDayDetails, setSelectedDayDetails] = useState<DailyMetrics | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Generate mock data for the current month
+  const generateMonthData = (year: number, month: number) => {
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    return Array.from({ length: daysInMonth }, (_, i) => ({
+      date: `${year}-${(month + 1).toString().padStart(2, '0')}-${(i + 1).toString().padStart(2, '0')}`,
+      steps: Math.floor(7000 + Math.random() * 5000),
+      calories: Math.floor(300 + Math.random() * 300),
+      distance: +(Math.random() * 8).toFixed(2),
+      active_minutes: Math.floor(30 + Math.random() * 60),
+      heart_rate: Array.from({ length: 24 }, (_, hour) => ({
+        time: `${hour.toString().padStart(2, '0')}:00`,
+        value: Math.floor(60 + Math.random() * 30)
+      })),
+      mood: ['energetic', 'happy', 'neutral', 'tired'][Math.floor(Math.random() * 4)],
+      workouts: i % 3 === 0 ? [{
+        id: `workout-${i}`,
+        duration: Math.floor(30 + Math.random() * 30),
+        calories: Math.floor(200 + Math.random() * 300),
+        workout_types: {
+          name: 'Running',
+          icon: 'run',
+          color: '#F87171'
+        }
+      }] : []
+    }));
+  };
+
   useEffect(() => {
     loadMonthData();
   }, [currentDate]);
 
-  const loadMonthData = async () => {
+  const loadMonthData = () => {
     setLoading(true);
-    const metrics = await fetchMonthlyHealthMetrics(
+    const metrics = generateMonthData(
       currentDate.getFullYear(),
       currentDate.getMonth()
     );
 
-    if (metrics) {
-      const dataByDate = metrics.reduce((acc, metric) => {
-        acc[metric.date] = metric;
-        return acc;
-      }, {} as Record<string, DailyMetrics>);
-      setMonthlyData(dataByDate);
-    }
+    const dataByDate = metrics.reduce((acc, metric) => {
+      acc[metric.date] = metric;
+      return acc;
+    }, {} as Record<string, DailyMetrics>);
+    
+    setMonthlyData(dataByDate);
     setLoading(false);
   };
 
@@ -73,10 +98,18 @@ export function WorkoutPage() {
     return `aspect-square rounded-lg cursor-pointer transition-all duration-200 flex flex-col p-2 text-left h-20 border-2 ${colorClass} hover:brightness-110`;
   };
 
-  const handleDayClick = async (date: string) => {
-    const details = await fetchDayDetails(date);
+  const handleDayClick = (date: string) => {
+    const details = monthlyData[date];
     if (details) {
-      setSelectedDayDetails(details);
+      setSelectedDayDetails({
+        ...details,
+        goals: {
+          steps: 10000,
+          calories: 500,
+          activeMinutes: 60,
+          workouts: 1
+        }
+      });
       setSelectedDate(date);
     }
   };
@@ -222,7 +255,15 @@ export function WorkoutPage() {
 
       {selectedDate && selectedDayDetails && (
         <DayDetailsModal
-          details={selectedDayDetails}
+          details={{
+            ...selectedDayDetails,
+            goals: {
+              steps: 10000,
+              calories: 500,
+              activeMinutes: 60,
+              workouts: 1
+            }
+          }}
           onClose={() => {
             setSelectedDate(null);
             setSelectedDayDetails(null);

@@ -1,46 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Navigation } from './components/Navigation';
 import { Dashboard } from './components/Dashboard';
 import { WorkoutPage } from './pages/WorkoutPage';
 import { HealthPage } from './pages/HealthPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { AITrainerPage } from './pages/AITrainerPage';
-import { supabase } from './lib/supabase';
-import { insertSampleData } from './lib/seedData';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('dashboard');
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-
-  useEffect(() => {
-    checkUser();
-  }, []);
-
-  const checkUser = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    setIsAuthenticated(!!user);
-    
-    if (!user) {
-      const { error } = await supabase.auth.signUp({
-        email: 'demo@example.com',
-        password: 'demo12345',
-      });
-      
-      if (!error) {
-        // Auto sign in after sign up
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email: 'demo@example.com',
-          password: 'demo12345',
-        });
-        
-        if (!signInError) {
-          setIsAuthenticated(true);
-          // Insert sample data after successful authentication
-          await insertSampleData();
-        }
-      }
-    }
-  };
 
   return (
     <div className="min-h-screen bg-gray-900">
