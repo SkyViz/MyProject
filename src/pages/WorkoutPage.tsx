@@ -95,7 +95,7 @@ export function WorkoutPage() {
     const steps = dayData?.steps || 0;
     const colorClass = getActivityColor(steps);
     
-    return `aspect-square rounded-lg cursor-pointer transition-all duration-200 flex flex-col p-2 text-left h-20 border-2 ${colorClass} hover:brightness-110`;
+    return `aspect-square rounded-lg cursor-pointer transition-all duration-200 flex flex-col p-2 text-left border-2 ${colorClass} hover:brightness-110`;
   };
 
   const handleDayClick = (date: string) => {
@@ -200,7 +200,7 @@ export function WorkoutPage() {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-7 gap-2 mb-4">
+              <div className="grid grid-cols-7 gap-2 mb-2">
                 {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
                   <div
                     key={day}
@@ -213,7 +213,7 @@ export function WorkoutPage() {
 
               <div className="grid grid-cols-7 gap-2">
                 {Array.from({ length: firstDayOfMonth }, (_, i) => (
-                  <div key={`empty-${i}`} className="aspect-square" />
+                  <div key={`empty-${i}`} />
                 ))}
 
                 {Array.from({ length: daysInMonth }, (_, i) => {
